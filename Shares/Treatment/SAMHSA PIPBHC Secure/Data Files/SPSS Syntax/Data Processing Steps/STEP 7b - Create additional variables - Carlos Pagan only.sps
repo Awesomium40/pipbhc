@@ -244,6 +244,7 @@ COMPUTE DaysSince12WindowOpen = datediff(today, WindowOpen12, 'days').
 EXECUTE.
 
 COMPUTE DaysLeft12 = datedif(LastDay12, today, "days").
+EXECUTE.
 
 * More variable labels.
 VARIABLE LABELS
