@@ -46,4 +46,5 @@ Canna_UseBi.1 Canna_UseBi.2 Canna_UseBi.3 Cocain_UseBi.1 Cocain_UseBi.2 Cocain_U
 Stim_UseBi.2 Stim_UseBi.3 Meth_UseBi.1 Meth_UseBi.2 Meth_UseBi.3 Inhalant_UseBi.1 Inhalant_UseBi.2
 Inhalant_UseBi.3 Sedativ_UseBi.1 Sedativ_UseBi.2 Sedativ_UseBi.3 Hallucinog_UseBi.1 Hallucinog_UseBi.2
 Hallucinog_UseBi.3 StreetOpio_UseBi.1 StreetOpio_UseBi.2 StreetOpio_UseBi.3 RxOpioids_UseBi.1 RxOpioids_UseBi.2 RxOpioids_UseBi.3
-IllegalSubstanceUse.1 IllegalSubstanceUse.2 NeverUseSub30Days.1 NeverUseSub30Days.2 NeverUseTobacco30Days.1 NeverUseTobacco30Days.2 NotBingeDrinking30Days.1 NotBingeDrinking30Days.2.
+IllegalSubstanceUse.1 IllegalSubstanceUse.2 NeverUseSub30Days.1 NeverUseSub30Days.2 NeverUseTobacco30Days.1 NeverUseTobacco30Days.2 NotBingeDrinking30Days.1 NotBingeDrinking30Days.2
+LastReceivedServiceDate.

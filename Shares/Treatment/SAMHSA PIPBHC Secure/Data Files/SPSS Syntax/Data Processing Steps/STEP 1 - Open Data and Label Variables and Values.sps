@@ -533,6 +533,19 @@ Svc_HIVTesting Svc_ReferredSupport
                             EXECUTE.
                             DELETE VARIABLES LastServiceDate LastServiceDateTemp LastServiceDate_String.
 
+                            ****LastServiceDate should reflect either the last time a client was served OR the last time they were assessed****.
+                            NUMERIC LastServed (DATE14).
+                            DO IF (Assessment NE 699).
+                                COMPUTE LastServed = MAX(ObservationDate, LastServiceDate_New).
+                            END IF.
+                            EXECUTE.
+
+                            AGGREGATE
+                                  /OUTFILE=* MODE=ADDVARIABLES
+                                  /BREAK=Client_ID
+                                  /LastReceivedServiceDate=MAX(LastServed).
+                           EXECUTE.
+
                             AUTORECODE VARIABLES=DOB
                             /into DOBTemp
                             /print.
