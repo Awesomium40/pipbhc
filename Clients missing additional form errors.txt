@@ -1,0 +1,30 @@
+390845
+	- 3 rows: 
+		674: (6m) listed as InterviewConducted = 0 and WhyNotConducted = 4
+		3443: (BL) listed as ConductedInterview = 1
+		3549: (3m) listed as ConductedInterview = 1
+394030
+	- 3 rows:
+		3493: (BL) listed as ConductedInterview = 1
+		3599: (3m) listed as ConductedInterview = 1
+		3684: (6m) listed as ConductedInterview = 1
+397829
+	- 3 rows:
+		666 (6m) listed as ConductedInterview = 0, WhyNotConducted = 5
+		3462 (BL) listed as ConductedInterview = 1
+		3506 (3m) listed as ConductedInterview = 1
+39849
+	- 3 rows:
+		664 (6m) listed as ConductedInterview = 0, WhyNotConducted = 5
+		3445 (BL) listed as ConductedInterview = 1
+		3548 (3m) listed as ConductedInterview = 1
+3100713
+	- 4 rows:
+		653 (6m) listed as ConductedInterview = 0, WhyNotConducted = 4
+		654 (DC) listed as ConductedInterview = 0 WhyNotConducted = 5
+
+3100866
+	- 3 rows:
+		670 (6m) listed as ConductedInterview = 0, WhyNotConducted  5
+		3468 (BL) listed as ConductedInterview = 1
+		3565 (3m) listed as ConductedInterview = 1
