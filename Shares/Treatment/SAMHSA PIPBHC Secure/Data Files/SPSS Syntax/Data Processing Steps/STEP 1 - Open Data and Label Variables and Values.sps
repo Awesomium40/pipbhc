@@ -471,7 +471,7 @@ Svc_HIVTesting Svc_ReferredSupport
                             NUMERIC YearTemp (F4.0).
                             DO IF Month GE 10.
                                 COMPUTE YearTemp = FFY - 1.
-                            ELSE
+                            ELSE.
                                 COMPUTE YearTemp = FFY.
                             END IF.
                             EXECUTE.
