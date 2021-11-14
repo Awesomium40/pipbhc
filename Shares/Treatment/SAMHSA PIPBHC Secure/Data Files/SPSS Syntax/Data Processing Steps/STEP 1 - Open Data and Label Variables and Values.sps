@@ -468,10 +468,17 @@ Svc_HIVTesting Svc_ReferredSupport
 
                             /*There are 39 rows for whom this process does not work because both their InterviewDate and Discharge date are MISSING*/.
                             /*Workaround is to compute a date for them from Month and FFY*/.
-                            IF SYSMIS(ObservationDate) ObservationDate = DATE.MDY(Month, 15, FFY).
+                            NUMERIC YearTemp (F4.0).
+                            DO IF Month GE 10.
+                                COMPUTE YearTemp = FFY - 1.
+                            ELSE
+                                COMPUTE YearTemp = FFY.
+                            END IF.
+                            EXECUTE.
+                            IF SYSMIS(ObservationDate) ObservationDate = DATE.MDY(Month, 15, YearTemp).
                             EXECUTE.
                             
-                            DELETE VARIABLES observationtemp InterviewDate DischargeDate ConsumerID interview.
+                            DELETE VARIABLES observationtemp InterviewDate DischargeDate ConsumerID interview YearTemp.
                             
 /*Fix other dates in the file*/
                             
