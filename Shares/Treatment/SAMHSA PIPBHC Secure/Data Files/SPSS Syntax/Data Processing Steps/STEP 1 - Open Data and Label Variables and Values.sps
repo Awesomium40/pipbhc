@@ -468,7 +468,10 @@ Svc_HIVTesting Svc_ReferredSupport
 
                             /*There are 39 rows for whom this process does not work because both their InterviewDate and Discharge date are MISSING*/.
                             /*Workaround is to compute a date for them from Month and FFY*/.
+<<<<<<< HEAD
 
+=======
+>>>>>>> SS-00001
                             /*First step is to compute a valid year from FFY*/.
                             DO IF Month GE 10.
                                 COMPUTE YearTemp = FFY - 1.
