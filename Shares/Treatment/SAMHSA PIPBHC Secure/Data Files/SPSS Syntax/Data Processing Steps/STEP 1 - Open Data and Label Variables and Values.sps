@@ -451,7 +451,7 @@ AGGREGATE
 EXECUTE.
 
 FORMATS ObservationDate LastServiceDate_New GAFDate_New DateBloodDrawn_New DOB_New DischargeDate_New (DATE14).
-DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB.
+DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB YearTemp LastServed.
 
 
 /*..........................ADD VALUE LABELS..............................................*/
