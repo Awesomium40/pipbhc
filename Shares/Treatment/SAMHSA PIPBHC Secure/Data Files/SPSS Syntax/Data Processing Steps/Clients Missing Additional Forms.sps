@@ -1,6 +1,21 @@
 * Encoding: UTF-8.
 *Creating a variable for whether or not we've received an additional client information from for a client for Enrollment Forms
 
+/****Start by opening the primary dataset****/.
+GET DATA
+  /TYPE=XLSX
+  /FILE="pipbhc"
+   /CELLRANGE=FULL
+  /READNAMES=ON
+  /HIDDEN IGNORE=YES.
+EXECUTE.
+DATASET NAME FullData.    
+
+
+/**********BELOW HERE IS THE ORIGINAL CODE**********/.
+
+
+
 DATASET ACTIVATE PIPBHC_Long.
 Recode ObservationDate.4 (MISSING=0) into AdditionalClientInfoForm.
 EXECUTE.
