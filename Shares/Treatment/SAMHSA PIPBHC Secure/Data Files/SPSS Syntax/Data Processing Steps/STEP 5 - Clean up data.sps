@@ -153,8 +153,3 @@ VALUE LABELS InterviewType_07
 5 'Additional measures first follow up'
 6 'Additional measures second follow up'.
 
-
-
-
-
-

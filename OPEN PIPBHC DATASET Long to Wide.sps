@@ -3,8 +3,8 @@
 
 /**********UPDATE FILE HANDLE FOR THE ROOT FOLDER BELOW BEFORE RUNNING THIS SYNTAX************************/.
 *FILE HANDLE rootFolder /NAME='\\casa.casacolumbia.org'.
-FILE HANDLE rootFolder /NAME='D:\SyncThing\mt'.
-FILE HANDLE pipbhc /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Data Files\Excel Files\Data Downloads\PIPBHC Data Download 11.8.21.xlsx'.
+FILE HANDLE rootFolder /NAME='D:\SyncThing\ptea'.
+FILE HANDLE pipbhc /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Data Files\Excel Files\Data Downloads\PIPBHC Data Download 11.15.21.xlsx'.
 FILE HANDLE procStepFolder /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Data Files\SPSS Syntax\Data Processing Steps'.
 
 

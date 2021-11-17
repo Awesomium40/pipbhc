@@ -1,0 +1,207 @@
+[1mdiff --git a/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/Clients Missing Additional Forms.sps b/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/Clients Missing Additional Forms.sps[m
+[1mindex 256d432..6a421d8 100644[m
+[1m--- a/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/Clients Missing Additional Forms.sps[m	
+[1m+++ b/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/Clients Missing Additional Forms.sps[m	
+[36m@@ -1,187 +1,6 @@[m
+ * Encoding: UTF-8.[m
+ *Creating a variable for whether or not we've received an additional client information from for a client for Enrollment Forms[m
+ [m
+[31m-FILE HANDLE acifFolder /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Additional Client Information Forms'.[m
+[31m-[m
+[31m-/***OPEN THE EXCEL FORMS AND EXTRACT THE REQUIRED DATA***/.[m
+[31m-/*START WITH FULL DOWNLOAD*/.[m
+[31m-GET DATA[m
+[31m-  /TYPE=XLSX[m
+[31m-  /FILE='pipbhc'[m
+[31m-   /CELLRANGE=FULL[m
+[31m-  /READNAMES=ON[m
+[31m-  /HIDDEN IGNORE=YES.[m
+[31m-EXECUTE.[m
+[31m-DATASET NAME FD.[m
+[31m-DATASET ACTIVATE FD.[m
+[31m-[m
+[31m-SAVE OUTFILE='acifFolder\full_data.sav'[m
+[31m-    /KEEP=ConsumerID InterviewType_07 ConductedInterview WhyNotConducted Assessment InterviewDate DischargeDate Month FFY.[m
+[31m-[m
+[31m-GET FILE='acifFolder\full_data.sav'.[m
+[31m-DATASET NAME CMAF.[m
+[31m-DATASET ACTIVATE CMAF.[m
+[31m-DATASET CLOSE FD.[m
+[31m-[m
+[31m-[m
+[31m-****Numeric Client ID needs to be computed from the string version****.[m
+[31m-NUMERIC Client_ID (F8.0).[m
+[31m-COMPUTE Client_ID=NUMBER(CHAR.SUBSTR(ConsumerID, 2, CHAR.RINDEX(ConsumerID,"'")-2),F8.0).[m
+[31m-EXECUTE.[m
+[31m-RECODE Client_ID (1090021=0190021).[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-[m
+[31m-****Clinic needs to be computed from the Client ID****.[m
+[31m-DATASET ACTIVATE CMAF.[m
+[31m-RECODE Client_ID (20000 thru 29999=2)(100000 thru 199999=1) (200000 thru 299999=2) (300000 thru 399999=3) (3000000 thru 3999999=3) INTO Clinic.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****Need to determine whether clients missed an assessment****[m
+[31m-****Assessment 699 = discharge, all others represent actual interviews****[m
+[31m-****ConductedInterview is binary, represents whether the interview actually happened****.[m
+[31m-NUMERIC MissedAssessment(F2.0).[m
+[31m-DO IF Assessment NE 699.[m
+[31m-    RECODE ConductedInterview (0=1)(ELSE=0) INTO MissedAssessment.[m
+[31m-END IF.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****Compute the ObservationDate as is done in the typical workflow****.[m
+[31m-AUTORECODE VARIABLES=InterviewDate[m
+[31m-/into ObservationTemp[m
+[31m-/print.[m
+[31m-[m
+[31m-STRING Interview (A11).[m
+[31m-DO IF  (ObservationTemp > 1).[m
+[31m-RECODE InterviewDate (ELSE=Copy) INTO Interview.[m
+[31m-END IF.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-DO IF  (ObservationTemp = 1).[m
+[31m-RECODE DischargeDate (ELSE=Copy) INTO Interview.[m
+[31m-END IF.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-alter type  Interview (f1).[m
+[31m-COMPUTE ObservationDate = DATE.MDY(1,1,1900) +( (Interview - 2) * 24 * 60 * 60).[m
+[31m-FORMATS ObservationDate (DATE14).[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-VARIABLE LABELS  [m
+[31m-ObservationDate 'Date interview was conducted'.[m
+[31m-[m
+[31m-****There are several clients for whom both the InterviewDate and DischargeDate are missing.****[m
+[31m-****This will require valid date information, which we can compute from the month and FFY****[m
+[31m-****For these clients, the above procedure does not yield a valid ObservationDate, so interpolate using Month, and FFY.[m
+[31m-****Fiscal year isn't the same as calendar year (rolls over in October), so compute a valid year.[m
+[31m-NUMERIC Year (F4.0).[m
+[31m-DO IF Month GE 10.[m
+[31m-    COMPUTE Year = FFY - 1.[m
+[31m-ELSE IF MONTH LT 10.[m
+[31m-    COMPUTE Year = FFY.[m
+[31m-END IF.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-IF SYSMIS(ObservationDate) ObservationDate = DATE.MDY(Month, 15, Year).[m
+[31m-EXECUTE.[m
+[31m-DELETE VARIABLES observationtemp InterviewDate DischargeDate ConsumerID interview Year.[m
+[31m-[m
+[31m-****The original InterviewType_07 was ambiguous and not useful for computing various other variables****[m
+[31m-****Replace with a new version that more clearly describes the interview type****.[m
+[31m-DATASET ACTIVATE CMAF.[m
+[31m-NUMERIC InterviewType (F2.0).[m
+[31m-RECODE Assessment (600 = 1) (301 = 2) (302 = 3) (303 = 4) (304 = 5) (699=9) INTO InterviewType.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****Eventually, the PIPBHC dataset will need to be matched to the Additional Forms dataset****[m
+[31m-****This can be done via the Client_ID and Time variables****[m
+[31m-****in the AF dataset, Time is coded as follows: 1 = BL, 2 = 3m, 3 = 6m****[m
+[31m-****Use the Assessment variable to compute Time in this dataset****.[m
+[31m-NUMERIC Time (F2.0).[m
+[31m-RECODE Assessment (600 = 1) (301 = 2) (302 = 3) (303 = 4) (304 = 5) (699=9) INTO Time.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****Load the Additional Form dataset so that it can be matched with the PIPBHC dataset****.[m
+[31m-GET DATA[m
+[31m-  /TYPE=XLSX[m
+[31m-  /FILE='acifFolder\Additional Client Information Form Spreadsheet.xlsx'[m
+[31m-  /SHEET=name 'For IMPORT - DO NOT EDIT'[m
+[31m-  /CELLRANGE=FULL[m
+[31m-  /READNAMES=ON[m
+[31m-  /DATATYPEMIN PERCENTAGE=95.0[m
+[31m-  /HIDDEN IGNORE=YES.[m
+[31m-EXECUTE.[m
+[31m-DATASET NAME AdditionalInfo.[m
+[31m-[m
+[31m-DATASET ACTIVATE AdditionalInfo.[m
+[31m-SAVE OUTFILE='acifFolder/AdditionalInfo.sav'[m
+[31m-    /KEEP=Client_ID ObservationDate ClientType Time Followup3M[m
+[31m-    /RENAME ObservationDate=AdditionalFormDate Time=AdditionalForm_Time.[m
+[31m-[m
+[31m-GET FILE='acifFolder/AdditionalInfo.sav'.[m
+[31m-DATASET NAME AI.[m
+[31m-DATASET ACTIVATE AI.[m
+[31m-DATASET CLOSE AdditionalInfo.[m
+[31m-SELECT IF NOT SYSMIS(Client_ID).[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****This dataset will need a clinic variable as well****.[m
+[31m-DATASET ACTIVATE AI.[m
+[31m-RECODE Client_ID (20000 thru 29999=2)(100000 thru 199999=1) (200000 thru 299999=2) (300000 thru 399999=3) (3000000 thru 3999999=3) INTO Clinic.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-****Compute the T_Time variable, which determines at which point clients got an assessment with additional form****.[m
+[31m-DATASET ACTIVATE AI.[m
+[31m-SORT CASES BY Client_ID(A) AdditionalFormDate(A).[m
+[31m-MATCH FILES[m
+[31m-  /FILE=*[m
+[31m-  /BY Client_ID[m
+[31m-  /FIRST=PrimaryFirst[m
+[31m-  /LAST=PrimaryLast.[m
+[31m-DO IF (PrimaryFirst).[m
+[31m-COMPUTE  MatchSequence=1-PrimaryLast.[m
+[31m-ELSE.[m
+[31m-COMPUTE  MatchSequence=MatchSequence+1.[m
+[31m-END IF.[m
+[31m-LEAVE  MatchSequence.[m
+[31m-FORMATS  MatchSequence (f7).[m
+[31m-COMPUTE  InDupGrp=MatchSequence>0.[m
+[31m-SORT CASES InDupGrp(D).[m
+[31m-MATCH FILES[m
+[31m-  /FILE=*[m
+[31m-  /DROP=PrimaryFirst InDupGrp.[m
+[31m-VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary' MatchSequence [m
+[31m-    'Sequential count of matching cases'.[m
+[31m-VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.[m
+[31m-VARIABLE LEVEL  PrimaryLast (ORDINAL) /MatchSequence (SCALE).[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-DATASET ACTIVATE AI.[m
+[31m-RENAME VARIABLES  MatchSequence = Time.[m
+[31m-EXECUTE.[m
+[31m-[m
+[31m-RECODE Time (0=1).[m
+[31m-[m
+[31m-VARIABLE LABELS  Time 'Assessment at which client got tracking form'.[m
+[31m-VALUE LABELS  Time [m
+[31m-    1 'Enrollment tracking form' [m
+[31m-    2 'First follow up' [m
+[31m-    3 'Second follow up' [m
+[31m-    4 'Third follow up'.[m
+[31m- EXECUTE.[m
+[31m-DELETE VARIABLES PrimaryLast.[m
+[31m- EXECUTE.[m
+[31m-[m
+[31m-*SORT CASES BY Client_ID TrackingFormCount.[m
+[31m-*CASESTOVARS[m
+[31m-  /ID=Client_ID[m
+[31m-  /INDEX=TrackingFormCount[m
+[31m-  /GROUPBY=VARIABLE.[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-[m
+[31m-*********************************************BELOW HERE IS THE OLD CODE TO BE REPLACED*********************************************[m
+ DATASET ACTIVATE PIPBHC_Long.[m
+ Recode ObservationDate.4 (MISSING=0) into AdditionalClientInfoForm.[m
+ EXECUTE.[m
+[1mdiff --git a/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/STEP 3 - Create SPARS Enrollment, FollowUp, and Discharge Datasets.sps b/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/STEP 3 - Create SPARS Enrollment, FollowUp, and Discharge Datasets.sps[m
+[1mindex b093b4d..6d3630e 100644[m
+[1m--- a/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/STEP 3 - Create SPARS Enrollment, FollowUp, and Discharge Datasets.sps[m	
+[1m+++ b/Shares/Treatment/SAMHSA PIPBHC Secure/Data Files/SPSS Syntax/Data Processing Steps/STEP 3 - Create SPARS Enrollment, FollowUp, and Discharge Datasets.sps[m	
+[36m@@ -346,8 +346,8 @@[m [mEXECUTE.[m
+ DELETE VARIABLES DOB_New Clinic LastServiceDate_New GenderSpec EthnicOtherSpec gender_binary race[m
+                                                    Agegroup RaceEth Ethnic Age Age_cat Gender HispanicLatino EthnicCentralAmerican EthnicCuban EthnicDominican EthnicMexican EthnicPuertoRican EthnicSouthAmerican [m
+                                                    RaceAmericanIndian EthnicOther Agegroup educ_cat edu_cat1 SexualIdentity_B[m
+[31m-                                                   RaceBlack RaceAsian  RaceNativeHawaiian RaceAlaskaNative RaceWhite RaceAmericanIndian Agegroup SexualIdentity SexualIdentityOther WhyNotConducted [m
+[31m-                                                   GAFScore EverServed ConductedInterview ViolenceTrauma PTSDSymp PTSD EverServed ActiveDuty_Self ActiveDuty_Else[m
+[32m+[m[32m                                                   RaceBlack RaceAsian  RaceNativeHawaiian RaceAlaskaNative RaceWhite RaceAmericanIndian Agegroup SexualIdentity SexualIdentityOther[m[41m [m
+[32m+[m[32m                                                   GAFScore EverServed ViolenceTrauma PTSDSymp PTSD EverServed ActiveDuty_Self ActiveDuty_Else[m
+                                                    VT_NightmaresThoughts VT_NotThinkAboutIt VT_OnGuard VT_NumbDetached EmploymentType_07 OtherResponseSpecify ReassessmentStatus_07 OtherReassessment_07 DischargeStatus [m
+                                                    OtherDischargeStatus Svc_MentalHealthFreq_07 SiteID FirstReceivedServicesDate [m
+                                                    ConsumerPrivateInsurance CurrentSamhsaGrantFunding DiagnosisOneCategory DiagnosisOne DiagnosisTwo DiagnosisThree DiagnosisThreeCategory DiagnosisTwoCategory [m

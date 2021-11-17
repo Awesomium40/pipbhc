@@ -1,0 +1,21 @@
+Assessment:
+	600 = BL
+	301 = 3m
+	302 = 6m
+	303 = 9m
+	304 = 12m
+	699 = DC
+	(Clients at Clinic 3 get 600, 301, 302, 303, 304, 699)
+
+Recode Assessment into time
+	600 = 1
+	301 = 2
+	302 = 3
+	303 = 4
+	304 = 5
+
+Bugs:
+	Bug1 - Step 1 date calculation sometiems computes date as 2022 instead of 2021
+	SS-00001 - Fix the discrepant PowerBI numbers
+
+399798 - Discharged 10/15, Last Service date 8/15 - EXCLUDE
