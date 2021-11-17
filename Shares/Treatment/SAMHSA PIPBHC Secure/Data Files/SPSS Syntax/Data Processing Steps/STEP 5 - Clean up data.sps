@@ -1,4 +1,4 @@
-* Encoding: windows-1252.
+* Encoding: UTF-8.
 
 * Create a continious version of time between the observation and the clients first enrollment into SPARS
 *Date and Time Wizard: Time_Cont.
@@ -152,6 +152,7 @@ VALUE LABELS InterviewType_07
 4 'Additional measures enrollment'
 5 'Additional measures first follow up'
 6 'Additional measures second follow up'.
+
 
 
 
