@@ -380,188 +380,79 @@ Svc_HIVTesting Svc_ReferredSupport
              ( -9).
             
 
-/*Format ID so it's numbers and doesn't contain ' ' */
-
-            STRING  Client_ID (A8).
-            COMPUTE Client_ID=CHAR.SUBSTR(ConsumerID,2,8).
-            VARIABLE LABELS  
-                 Client_ID 'ID of clients for matching across datasets'.
-
-            ALTER TYPE Client_ID (F1).
-
-            STRING  Client_ID_7 (A8).
-            COMPUTE Client_ID_7=CHAR.SUBSTR(ConsumerID,2,7).
-            VARIABLE LABELS  
-                 Client_ID_7 'ID of clients for matching across datasets'.
-
-            ALTER TYPE Client_ID_7 (F1).
-
-            DATASET ACTIVATE FullData.
-            DO IF  Missing(Client_ID).
-            RECODE Client_ID_7 (ELSE=Copy) INTO Client_ID.
-            END IF.
-            EXECUTE.
-
-            DATASET ACTIVATE FullData.
-            DELETE VARIABLES Client_ID_7.
-
-            STRING  Client_ID_6 (A8).
-            COMPUTE Client_ID_6=CHAR.SUBSTR(ConsumerID,2,6).
-            VARIABLE LABELS  
-                 Client_ID_6 'ID of clients for matching across datasets'.
-
-            ALTER TYPE Client_ID_6 (F1).
-
-            DATASET ACTIVATE FullData.
-            DO IF  Missing(Client_ID).
-            RECODE Client_ID_6 (ELSE=Copy) INTO Client_ID.
-            END IF.
-            EXECUTE.
-
-            DATASET ACTIVATE FullData.
-            DELETE VARIABLES Client_ID_6.
-
+/*Compute a Numeric version of Client_ID from the String Variable ConsumerID*/.
+NUMERIC Client_ID (F10.0).
+COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
+EXECUTE.
      
-/*Fix the one case where the ID is entered wrong*/
-            
-            RECODE Client_ID (1090021=0190021).
-            EXECUTE.
+/*Fix the one case where the ID is entered wrong*/.   
+RECODE Client_ID (1090021=0190021).
+EXECUTE.
            
 /*..............................................................FIX DATES...................................................*/
 
-/*Create one variable from interview date and discharge date, and then transfer Excel 5 digit date to real date*/
+/*Most of the date variables are stored as strings. Convert them to NUMERIC type and format appropriately*/.
+RECODE InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB
+    ('01/01/1869', '07/01/1869', '06/01/1869', '08/01/1869', '09/01/1869', '' = '-1').
+MISSING VALUES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB ('-1').
+EXECUTE.
 
-                            AUTORECODE VARIABLES=InterviewDate
-                            /into ObservationTemp
-                            /print.
-                            
-                            STRING Interview (A11).
-                            DO IF  (ObservationTemp > 1).
-                            RECODE InterviewDate (ELSE=Copy) INTO Interview.
-                            END IF.
-                            EXECUTE.
-                            
-                            DO IF  (ObservationTemp = 1).
-                            RECODE DischargeDate (ELSE=Copy) INTO Interview.
-                            END IF.
-                            EXECUTE.
-                            
-                            alter type  Interview (f1).
-                            COMPUTE ObservationDate = DATE.MDY(1,1,1900) +( (Interview - 2) * 24 * 60 * 60).
-                            FORMATS ObservationDate (DATE14).
-                            EXECUTE.
-                            
-                            VARIABLE LABELS  
-                            ObservationDate 'Date interview was conducted'.
+/*recode the various date variables into NUMERIC type rather than string*/.
+RECODE InterviewDate(MISSING=SYSMIS)(CONVERT) INTO InterviewDate_New.
+RECODE DischargeDate(MISSING=SYSMIS)(CONVERT) INTO DischargeDate_New.
+RECODE LastServiceDate(MISSING=SYSMIS)(CONVERT) INTO LastServiceDate_New.
+RECODE GAFDate(MISSING=SYSMIS)(CONVERT) INTO GAFDate_New.
+RECODE DateBloodDrawn(MISSING=SYSMIS)(CONVERT) INTO DateBloodDrawn_New.
+RECODE DOB(MISSING=SYSMIS)(CONVERT) INTO DOB_New.
+EXECUTE.
 
-                            NUMERIC ODValid (F2.0).
-                            COMPUTE ODValid = NOT SYSMIS(ObservationDate).
-                            VARIABLE LABELS ODValid 'ObservationDate is Valid'.
-                            VALUE LABELS ODVALID 0 'False' 1 'True'.
-                            EXECUTE.
-                            DATASET ACTIVATE FullData.
-                            FREQUENCIES VARIABLES=ODValid
-                              /ORDER=ANALYSIS.
+/*Compute the ObservationDate variable from InterviewDate and DischargeDate*/.
+DO IF NOT SYSMIS(InterviewDate_New).
+    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((InterviewDate_New - 2 ) * 24 * 3600).
+ELSE IF NOT SYSMIS(DischargeDate_New).
+    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 24 * 3600).
+END IF.
+EXECUTE.
 
-                            DELETE VARIABLES ODValid.
-                            EXECUTE.
+/*There are a handful of cases for which both InterviewDate and DischargeDate are missing. 
+/*These need an ObservationDate computed from the data that is available */.
+NUMERIC YearTemp (F4.0).
+DO IF Month GE 10.
+    COMPUTE YearTemp = FFY - 1.
+ELSE.
+    COMPUTE YearTemp = FFY.
+END IF.
+DO IF SYSMIS(ObservationDate).
+    COMPUTE ObservationDate = DATE.MDY(Month, 15, YearTemp).
+END IF.
+EXECUTE.
 
-                            /*There are 39 rows for whom this process does not work because both their InterviewDate and Discharge date are MISSING*/.
-                            /*Workaround is to compute a date for them from Month and FFY*/.
+/*The date variables are stored in days, need to convert these to seconds. Days * 24 (hours) * 60 (minutes) * 60 (seconds) */.
+/*24 * 60 * 60 = 24 * 3600 = 86400*/.
+COMPUTE LastServiceDate_New = DATE.MDY(1, 1, 1900) + ((LastServiceDate_New - 2 ) * 86400).
+COMPUTE GAFDate_New = DATE.MDY(1, 1, 1900) + ((GAFDate_New - 2 ) * 24 * 3600).
+COMPUTE DateBloodDrawn_New = DATE.MDY(1, 1, 1900) + ((DateBloodDrawn_New - 2 ) * 86400).
+COMPUTE DOB_New = DATE.MDY(1, 1, 1900) + ((DOB_New - 2 ) * 24 * 3600).
+COMPUTE DischargeDate_New = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 86400).
+EXECUTE.
 
-                            /*First step is to compute a valid year from FFY*/.
-                            DO IF Month GE 10.
-                                COMPUTE YearTemp = FFY - 1.
-                            ELSE.
-                                COMPUTE YearTemp = FFY.
-                            END IF.
-                            EXECUTE.
-                            /*Then use valid year to compute a valid ObservationDate*/.
-                            IF SYSMIS(ObservationDate) ObservationDate = DATE.MDY(Month, 15, YearTemp).
-                            EXECUTE.
-                            
-                            DELETE VARIABLES observationtemp InterviewDate DischargeDate ConsumerID interview YearTemp.
-                            
-/*Fix other dates in the file*/
-                            
-                            AUTORECODE VARIABLES=GAFDate
-                            /into GAFDateTemp
-                            /print.
-                            
-                            STRING GAFDate_String (A11).
-                            DO IF  (GAFDateTemp > 2).
-                            RECODE GAFDate (ELSE=Copy) INTO GAFDate_String.
-                            END IF.
-                            EXECUTE.
-                                                     
-                            alter type  GAFDate_String (f1).
-                            COMPUTE GAFDate_New  = DATE.MDY(1,1,1900) +( (GAFDate_String - 2) * 24 * 60 * 60).
-                            FORMATS GAFDate_New (DATE14).
-                            EXECUTE.
 
-                             DELETE VARIABLES GAFDate GAFDateTemp GAFDate_String.
-                            
-                            AUTORECODE VARIABLES=DateBloodDrawn
-                            /into DateBloodDrawnTemp
-                            /print.
-                            
-                            STRING DateBloodDrawn_String (A11).
-                            DO IF  (DateBloodDrawnTemp > 3).
-                            RECODE DateBloodDrawn (ELSE=Copy) INTO DateBloodDrawn_String.
-                            END IF.
-                            EXECUTE.
-                            
-                            alter type  DateBloodDrawn_String (f1).
-                            COMPUTE DateBloodDrawn_New  = DATE.MDY(1,1,1900) +( (DateBloodDrawn_String - 2) * 24 * 60 * 60).
-                            FORMATS DateBloodDrawn_New (DATE14).
-                            EXECUTE.
-                            DELETE VARIABLES DateBloodDrawnTemp DateBloodDrawn_String .
+****LastServiceDate should reflect either the last time a client was served OR the last time they were assessed****.
+NUMERIC LastServed (DATE14).
+DO IF (Assessment NE 699).
+    COMPUTE LastServed = MAX(ObservationDate, LastServiceDate_New).
+END IF.
+EXECUTE.
 
-                            AUTORECODE VARIABLES=LastServiceDate
-                            /into LastServiceDateTemp
-                            /print.
-                            
-                            STRING LastServiceDate_String (A11).
-                            DO IF  (LastServiceDateTemp > 3).
-                            RECODE LastServiceDate (ELSE=Copy) INTO LastServiceDate_String.
-                            END IF.
-                            EXECUTE.
-                            
-                            alter type  LastServiceDate_String (f1).
-                            COMPUTE LastServiceDate_New  = DATE.MDY(1,1,1900) +( (LastServiceDate_String - 2) * 24 * 60 * 60).
-                            FORMATS LastServiceDate_New (DATE14).
-                            EXECUTE.
-                            DELETE VARIABLES LastServiceDate LastServiceDateTemp LastServiceDate_String.
+AGGREGATE
+  /OUTFILE=* MODE=ADDVARIABLES
+  /BREAK=Client_ID
+  /LastReceivedServiceDate=MAX(LastServed).
+EXECUTE.
 
-                            ****LastServiceDate should reflect either the last time a client was served OR the last time they were assessed****.
-                            NUMERIC LastServed (DATE14).
-                            DO IF (Assessment NE 699).
-                                COMPUTE LastServed = MAX(ObservationDate, LastServiceDate_New).
-                            END IF.
-                            EXECUTE.
+FORMATS ObservationDate LastServiceDate_New GAFDate_New DateBloodDrawn_New DOB_New DischargeDate_New (DATE14).
+DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB.
 
-                            AGGREGATE
-                                  /OUTFILE=* MODE=ADDVARIABLES
-                                  /BREAK=Client_ID
-                                  /LastReceivedServiceDate=MAX(LastServed).
-                           EXECUTE.
-
-                            AUTORECODE VARIABLES=DOB
-                            /into DOBTemp
-                            /print.
-                            
-                            STRING DOB_String (A11).
-                            DO IF  (DOBTemp > 2).
-                            RECODE DOB (ELSE=Copy) INTO DOB_String.
-                            END IF.
-                            EXECUTE.
-                                                     
-                            alter type  DOB_String (f1).
-                            COMPUTE DOB_New  = DATE.MDY(1,1,1900) +( (DOB_String - 2) * 24 * 60 * 60).
-                            FORMATS DOB_New (DATE14).
-                            EXECUTE.
-
-                             DELETE VARIABLES DOB DOBTemp DOB_String.
 
 /*..........................ADD VALUE LABELS..............................................*/
 
