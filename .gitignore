@@ -1,4 +1,6 @@
 *.xlsx
 *.sav
 *.docx
+*.doc
 *.csv
+*.txt

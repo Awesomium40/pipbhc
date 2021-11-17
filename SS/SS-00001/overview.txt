@@ -1,5 +1,8 @@
 Client reports that the monthly dashboard numbers are not accurate re: Clients served in FY2022
 	Client numbers at last communication indicate that there should be 170 clients served, my numbers as of 11/05/2021 showed 1170
 		- More recent numbers are different still (182 as of 11/15)
+		- Investigation indicates that neither 170 nore 174 may be correct re: numbers served
+			- Between the relevant datasets there are barely enough rows with a last service date in FY2022 to account for this
+			- 
 	
 		
