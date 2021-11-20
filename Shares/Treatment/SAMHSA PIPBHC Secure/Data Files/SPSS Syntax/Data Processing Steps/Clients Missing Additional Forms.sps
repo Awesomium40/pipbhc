@@ -220,14 +220,14 @@ EXECUTE.
 VARIABLE LABELS  Time 'Assessment at which client got tracking form'.
 VALUE LABELS  Time 
     1 'Enrollment tracking form' 
-    2 'First follow up' 
-    3 'Second follow up' 
-    4 'Third follow up'.
- EXECUTE.
+    2 '6-Month Reassessment' 
+    3 '12-Month Reassessment' 
+    4 '18-Month Reassessment'.
+EXECUTE.
 DELETE VARIABLES PrimaryFirst Clinic.
- EXECUTE. 
+EXECUTE. 
 
-/*Attempt to reconcile the PIPBHC data with the ACIF data*/.
+/*Attempt to reconcile the PIPBHC data with the ACIF data, then the discharge data*/.
 DATASET ACTIVATE AI.
 SORT CASES BY Client_ID Time.
 DATASET ACTIVATE CMAF.
@@ -237,154 +237,77 @@ MATCH FILES /FILE=*
   /BY Client_ID Time.
 EXECUTE.
 
-SELECT IF Clinic GE 2.
+DATASET ACTIVATE Discharge.
+SORT CASES BY Client_ID.
+DATASET ACTIVATE CMAF.
+SORT CASES BY Client_ID.
+MATCH FILES /FILE=*
+    /TABLE='Discharge'
+    /BY Client_ID.
 EXECUTE.
 
+DATASET ACTIVATE CMAF.
+DATASET CLOSE AI.
+DATASET CLOSE Discharge.
 
-/**********BELOW HERE IS THE ORIGINAL CODE**********/.
-
-
-
-DATASET ACTIVATE PIPBHC_Long.
-Recode ObservationDate.4 (MISSING=0) into AdditionalClientInfoForm.
-EXECUTE.
-DO IF (ObservationDate.4 > 0).
-Compute AdditionalClientInfoForm = 1.
+NUMERIC Form_Missing (F2.0).
+/*Now compute a value that represents whether a form is missing*/.
+DO IF MissedAssessment EQ 0 AND SYSMIS(AdditionalFormDate).
+    RECODE Time(ELSE=COPY) INTO Form_Missing.
+ELSE.
+    COMPUTE Form_Missing = 0.
 END IF.
-EXECUTE. 
+EXECUTE.
 
-VARIABLE LABELS
-AdditionalClientInfoForm 'Additional form received for this client at enrollment'.
 VALUE LABELS
-AdditionalClientInfoForm
-0 'No'
-1 'Yes'.
+    Form_Missing 
+        1 'Enrollemnt' 
+        2 '6-month Re-assessment' 
+        3 '12-month Re-assessment'.
+
+
+
+DATASET COPY Dates.
+DATASET ACTIVATE Dates.
+DELETE VARIABLES InterviewType_07 ConductedInterview WhyNotConducted Assessment Month FFY Clinic InterviewDate_New DischargeDate_New
+    ClientType MissedAssessment AdditionalFormDate Followup3M Discharged Form_Missing.
+
+
+SORT CASES BY Client_ID Time .
+CASESTOVARS
+  /ID=Client_ID
+  /INDEX=Time
+  /GROUPBY=VARIABLE.
+
+RENAME VARIABLES 
+    ObservationDate.1 = Enrollment_Date 
+    ObservationDate.2 = Reassessment6M_Date
+    ObservationDate.3 = Reassessment12M_Date.
+
+
+SORT CASES BY Client_ID.
+DATASET ACTIVATE CMAF.
+SORT CASES BY Client_ID.
+MATCH FILES /FILE=*
+    /TABLE=Dates
+    /BY Client_ID.
 EXECUTE.
 
-DATASET ACTIVATE PIPBHC_Long.
-DATASET COPY PIPBHC_temp2.
-DATASET ACTIVATE PIPBHC_temp2.
-FILTER OFF.
-USE ALL.
-SELECT IF (AdditionalClientInfoForm = 0).
+
+DATASET ACTIVATE CMAF.
+IF (SYSMIS(Discharged)) Discharged = 0.
+SELECT IF Clinic GE 2 and Form_Missing GT 0.
 EXECUTE.
 
-COMPUTE Form_Missing=1.
-EXECUTE.
-
-*Creating a variable for whether or not we've received an additional client information from for a client for 3-month Follow-up forms
-
-DATASET ACTIVATE PIPBHC_Long.
-DATASET COPY PIPBHC_temp3.
-DATASET ACTIVATE PIPBHC_temp3.
-
-Recode ObservationDate.5 (MISSING=0) into AdditionalClientInfoForm3M.
-EXECUTE.
-DO IF (ObservationDate.5 > 0).
-Compute AdditionalClientInfoForm3M= 1.
-END IF.
-EXECUTE. 
-
-VARIABLE LABELS
-AdditionalClientInfoForm3M 'Additional form received for this client first followup'.
-VALUE LABELS
-AdditionalClientInfoForm3M
-0 'No'
-1 'Yes'.
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp3.
-FILTER OFF.
-USE ALL.
-SELECT IF (AdditionalClientInfoForm3M = 0).
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp3.
-FILTER OFF.
-USE ALL.
-SELECT IF (ObservationDate.2 > 0).
-EXECUTE.
-
-COMPUTE Form_Missing=2.
-EXECUTE.
-
-*Creating a variable for whether or not we've received an additional client information from for a client for 6-month Follow-up forms
-
-DATASET ACTIVATE PIPBHC_Long.
-DATASET COPY PIPBHC_temp4.
-DATASET ACTIVATE PIPBHC_temp4.
-
-Recode ObservationDate.6 (MISSING=0) into AdditionalClientInfoForm6M.
-EXECUTE.
-DO IF (ObservationDate.6 > 0).
-Compute AdditionalClientInfoForm6M= 1.
-END IF.
-EXECUTE. 
-
-VARIABLE LABELS
-AdditionalClientInfoForm6M 'Additional form received for this client second followup'.
-VALUE LABELS
-AdditionalClientInfoForm6M
-0 'No'
-1 'Yes'.
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp4.
-FILTER OFF.
-USE ALL.
-SELECT IF (AdditionalClientInfoForm6M = 0).
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp4.
-FILTER OFF.
-USE ALL.
-SELECT IF (ObservationDate.3 > 0).
-EXECUTE.
-
-COMPUTE Form_Missing=3.
-EXECUTE.
-
-/*****merge files together into one spreadsheet*
-
-DATASET ACTIVATE PIPBHC_temp2.
-ADD FILES /FILE=*
-  /FILE='PIPBHC_temp3'
-  /RENAME (AdditionalClientInfoForm3M=d0)
-  /DROP=d0.
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp2. 
-ADD FILES /FILE=* 
-  /FILE='PIPBHC_temp4' 
-  /RENAME (AdditionalClientInfoForm6M=d0) 
-  /DROP=d0. 
-EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp2. 
-VALUE LABELS Form_Missing
-                     1 'Enrollment'
-                     2 '3-Month Re-assessment'
-                     3 '6-Month Re-assessment'.
-                   EXECUTE.
-
-DATASET ACTIVATE PIPBHC_temp2. 
-FILTER OFF.
-USE ALL.
-SELECT IF (Clinic >= 2).
-EXECUTE.
-DATASET ACTIVATE PIPBHC_temp2. 
-SAVE TRANSLATE OUTFILE='acifFolder\Clients_Without_Additional_Forms.xlsx'
+SAVE TRANSLATE OUTFILE='D:\SyncThing\ptea\CMAF2.xlsx'
   /TYPE=XLS
   /VERSION=12
   /MAP
   /FIELDNAMES VALUE=NAMES
   /CELLS=LABELS
   /REPLACE
-  /Keep=Client_ID  Form_Missing ObservationDate.1 ObservationDate.2 ObservationDate.3
-  /rename ObservationDate.1=Enrollment_Date ObservationDate.2=Reassessment3M_Date ObservationDate.3=Reassessment6M_Date.
-USE ALL.
+  /KEEP=Client_ID Form_Missing Enrollment_Date Reassessment6M_Date Reassessment12M_Date.
 
-DATASET CLOSE PIPBHC_temp2.
-DATASET CLOSE PIPBHC_temp3.
-DATASET CLOSE PIPBHC_temp4.
+DATASET ACTIVATE PIPBHC_Long.
+DATASET CLOSE CMAF.
 
