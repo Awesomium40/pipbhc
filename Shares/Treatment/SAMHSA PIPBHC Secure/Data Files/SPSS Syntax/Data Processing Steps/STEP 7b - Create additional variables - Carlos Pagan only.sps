@@ -19,15 +19,13 @@ ClientReassessed3M
 1 'Yes'.
 EXECUTE.
 
-* The following will throw errors because no one in Carlos Pagan has yet been reassessed at 6M.
-
- * DATASET ACTIVATE PIPBHC_Long.
- * RECODE ObservationDate.3 (MISSING=0) into ClientReassessed6M.
- * EXECUTE.
- * DO IF (ObservationDate.3 >0).
- * COMPUTE ClientReassessed6M = 1.
- * END IF.
- * EXECUTE.
+DATASET ACTIVATE PIPBHC_Long.
+RECODE ObservationDate.3 (MISSING=0) into ClientReassessed6M.
+EXECUTE.
+DO IF (ObservationDate.3 >0).
+COMPUTE ClientReassessed6M = 1.
+END IF.
+EXECUTE.
 
  * VARIABLE LABELS
 ClientReassessed6M 'Has the six-month reassessment for this client been completed?'.
