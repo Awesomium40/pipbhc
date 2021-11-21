@@ -1,0 +1,3 @@
+Altered Step 1 Such that calculation of Client_ID is valid for all possible values of ConsumerID
+Altered Step 1 such that calculation of ObservationDate_New, DischargeDate_New, LastServiceDate_New, GAFDate_New, DateBloodDrawn_New, DOB_New are valid in all cases
+Altered Step 1 to simplify the calculation of ObservationDate

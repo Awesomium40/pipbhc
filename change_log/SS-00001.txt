@@ -1,0 +1,2 @@
+Fixed a bug that occasionally caused date of last service received to compute an incorrect year when date was at the edge of a fiscal year
+Update Monthly Dashboard to display the number of clients served, as specified by their last service date
