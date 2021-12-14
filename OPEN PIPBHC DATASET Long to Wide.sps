@@ -2,12 +2,15 @@
 
 
 /**********UPDATE FILE HANDLE FOR THE ROOT FOLDER BELOW BEFORE RUNNING THIS SYNTAX************************/.
+
+/*****************for deployment*******************************/.
 *FILE HANDLE rootFolder /NAME='\\casa.casacolumbia.org'.
 /******************For JWW Laptop**************************/.
 /*FILE HANDLE rootFolder /NAME='D:\DropBox\ptea'.
-
 /******************For JWW PC**************************/.
 FILE HANDLE rootFolder /NAME='D:\SyncThing\ptea'.
+
+
 FILE HANDLE pipbhc /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Data Files\Excel Files\Data Downloads\PIPBHC Data Download 12.10.21.xlsx'.
 FILE HANDLE procStepFolder /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Data Files\SPSS Syntax\Data Processing Steps'.
 
