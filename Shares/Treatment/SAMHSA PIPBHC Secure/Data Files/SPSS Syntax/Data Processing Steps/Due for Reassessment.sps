@@ -31,7 +31,6 @@ EXECUTE.
 RECODE Client_ID (1090021=0190021).
 EXECUTE.
 
-
 /******CREATE Clinic******/.
 DATASET ACTIVATE DFR.
 RECODE Client_ID (20000 thru 29999=2)(100000 thru 199999=1) (200000 thru 299999=2) (300000 thru 399999=3) (3000000 thru 3999999=3) INTO Clinic.
@@ -79,6 +78,27 @@ DELETE VARIABLES ObservationTemp ObservationTemp2 InterviewDate DischargeDate Co
 FILTER OFF.
 USE ALL.
 SELECT IF (Clinic GE 3).
+EXECUTE.
+
+
+/******Add some logic to deal with rows that are in error with respect to 'Assessment'******/.
+DATASET ACTIVATE DFR.
+DATASET COPY  Assessment_Errors.
+FILTER OFF.
+USE ALL.
+SELECT IF (Clinic GE 3 AND (Assessment NE 600 AND Assessment NE 301 AND Assessment NE 302 AND 
+    Assessment NE 303 AND Assessment NE 304 AND Assessment NE 699)).
+EXECUTE.
+
+
+WRITE OUTFILE='rootFolder/reassessment_errors.txt' ENCODING='UTF8'
+        /1'|Client ID='Client_ID  '|Assessment=' Assessment '|Date='ObservationDate '|'. 
+EXECUTE.
+
+/******Filter out the invalid records******/.
+DATASET ACTIVATE DFR.
+DATASET CLOSE Assessment_Errors.
+SELECT IF (Assessment EQ 600 OR Assessment EQ 301 OR Assessment EQ 302 OR Assessment EQ 303 OR Assessment EQ 304 OR Assessment EQ 699).
 EXECUTE.
 
 /******COMPUTE Discharged AS PER STEP 3******/.
@@ -169,7 +189,8 @@ SELECT IF (NOT SYSMIS(Client_id) AND Clinic EQ 3).
 EXECUTE.
 
 SAVE OUTFILE='ratFolder\HCVResults.sav'
-    /KEEP=Client_ID HCVTestResult.
+    /KEEP=Client_ID Time HCVTestResult
+    /RENAME Time=Form_Time.
 
 /***MERGE IN HCV TEST RESULT DATA***/.
 /******NOTE THAT THIS MAY THROW AN ERROR FOR LINE 191, CITING DUPLICATE KEY. THIS IS EXPECTED******/.
@@ -177,6 +198,10 @@ GET FILE='ratFolder\HCVResults.sav'.
 DATASET NAME HCV.
 DATASET ACTIVATE HCV.
 DATASET CLOSE AI.
+
+/***HCV Test Results only necessary from BL assessment***/.
+SELECT IF Form_Time EQ 1.
+EXECUTE.
 
 DATASET ACTIVATE DFR.
 SORT CASES BY Client_ID.
@@ -277,3 +302,4 @@ SAVE TRANSLATE OUTFILE='ratFolder\Reassessment Tracking.xlsx'
 DATASET ACTIVATE PIPBHC_Long.
 DATASET CLOSE DFR.
 DATASET CLOSE Reassessment.
+
