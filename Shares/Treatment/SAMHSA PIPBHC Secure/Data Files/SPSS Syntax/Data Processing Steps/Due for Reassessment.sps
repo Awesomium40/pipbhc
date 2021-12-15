@@ -84,6 +84,7 @@ EXECUTE.
 /******Add some logic to deal with rows that are in error with respect to 'Assessment'******/.
 DATASET ACTIVATE DFR.
 DATASET COPY  Assessment_Errors.
+DATASET ACTIVATE Assessment_Errors.
 FILTER OFF.
 USE ALL.
 SELECT IF (Clinic GE 3 AND (Assessment NE 600 AND Assessment NE 301 AND Assessment NE 302 AND 
