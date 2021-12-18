@@ -31,6 +31,20 @@ DATASET ACTIVATE CMAF.
 DATASET CLOSE FD.
 
 
+/************As of December, 2021, no longer collecting 3m/9m assessment data************/.
+/************SS-00006: Add logic to achieve the following************/.
+/************1: Remove 3m/9m data from the dataset************/.
+/************2: Recode 6m assessments such that they reflect the new values for assessment (600 instead of 300)************/.
+
+/****Remove 3m/rm reassessment data from the dataset, as it is no longer required****/.
+SELECT IF (Assessment NE 301 AND Assessment NE 303 AND Assessment NE 305).
+EXECUTE.
+
+/****Recode the old assessment values into the new values****/.
+RECODE Assessment(302=601)(304=602)(306=603).
+EXECUTE.
+
+
 ****Numeric Client ID needs to be computed from the string version****.
 NUMERIC Client_ID (F10.0).
 COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
@@ -118,11 +132,11 @@ RENAME VARIABLES PrimaryLast=Discharged.
 DATASET ACTIVATE CMAF.
 FILTER OFF.
 USE ALL.
-SELECT IF (Assessment EQ 600 OR Assessment EQ 302 OR Assessment EQ 304).
+SELECT IF (Assessment EQ 600 OR Assessment EQ 601 OR Assessment EQ 602).
 EXECUTE.
 
 SORT CASES BY Client_ID ObservationDate.
-RECODE Assessment(600=1)(302=2)(304=3) INTO Time.
+RECODE Assessment(600=1)(601=2)(602=3) INTO Time.
 EXECUTE.
 
 /****Again, there are likely to be duplicate cases, which need to be removed, as some clients were discharged and re-enrolled****/.
