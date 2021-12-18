@@ -1,6 +1,12 @@
 * Encoding: UTF-8.
-*Creating a variable for whether or not we've received an additional client information from for a client for Enrollment Forms
-
+/***********************************
+/*Clients Missing Additional Forms.sps
+/*Constucts the dataset which lists those clients missing their additional information form for an assessment
+/*Clients are missing an additional form if, for any record in PIPBHC Data Download:
+/*    - The assessment was conducted (ConductedInterview = 1)
+/*    - Assessment point is BL, 6M, 12M (Assessment IN [600, 302, 304])
+/*    - No Corresponding record exists in Client Additional Information Form
+    
 
 FILE HANDLE acifFolder /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Additional Client Information Forms'.
 
@@ -299,7 +305,7 @@ IF (SYSMIS(Discharged)) Discharged = 0.
 SELECT IF Clinic GE 2 and Form_Missing GT 0.
 EXECUTE.
 
-SAVE TRANSLATE OUTFILE='D:\SyncThing\ptea\CMAF2.xlsx'
+SAVE TRANSLATE OUTFILE='acifFolder\Clients_Without_Additional_Forms.xlsx'
   /TYPE=XLS
   /VERSION=12
   /MAP

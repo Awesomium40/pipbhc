@@ -27,21 +27,22 @@ COMPUTE ClientReassessed6M = 1.
 END IF.
 EXECUTE.
 
- * VARIABLE LABELS
+VARIABLE LABELS
 ClientReassessed6M 'Has the six-month reassessment for this client been completed?'.
- * VALUE LABELS
-ClientReassessed6M
-0 ' No'
-1 'Yes'.
- * EXECUTE.
+VALUE LABELS
+    ClientReassessed6M
+        0 ' No'
+        1 'Yes'.
+EXECUTE.
 
- * DATASET ACTIVATE PIPBHC_Long.
- * RECODE ObservationDate.4 (MISSING=0) into ClientReassessed9M.
- * EXECUTE.
- * DO IF (ObservationDate.4 >0).
- * COMPUTE ClientReassessed9M = 1.
- * END IF.
- * EXECUTE.
+*DATASET ACTIVATE PIPBHC_Long.
+*    RECODE ObservationDate.4 (MISSING=0) into ClientReassessed9M.
+*EXECUTE.
+
+*DO IF (ObservationDate.4 >0).
+*    COMPUTE ClientReassessed9M = 1.
+*END IF.
+*EXECUTE.
 
  * VARIABLE LABELS
 ClientReassessed9M 'Has the nine-month reassessment for this client been completed?'.
