@@ -291,7 +291,6 @@ DATASET ACTIVATE AdditionalMeasures.
 RENAME VARIABLES (ModifiedMini = T_ModifiedMini).
 RENAME VARIABLES (Time = T_Time).
 RENAME VARIABLES (ACE = T_ACE).
-RENAME VARIABLES (FollowUp3M = T_FollowUp3M).
 
 *set -1 as a missing value for the ACE score*
 
@@ -320,8 +319,7 @@ VARIABLE LABELS
     T_CrimJustice 'Involved in the Criminal Justice System?'
     T_Medication 'Client Has Been Prescribed Medication for Mental Health, Physical Health, or Substance Use'
     T_MedTake 'How Often Would Client Say They Take Their Medication?'
-    T_JobTraining 'Is the client involved in any job training programs'
-    T_FollowUp3M 'Does the client need follow-up in 3 months?'.
+    T_JobTraining 'Is the client involved in any job training programs'.
 EXECUTE.
 
 VALUE LABELS T_MI
@@ -332,7 +330,7 @@ VALUE LABELS T_MI
     T_MI_Other
     T_CrimJustice T_Employ T_SupportHouse
     T_SocialRehabProg
-    T_JobTraining T_Medication  T_FollowUp3M
+    T_JobTraining T_Medication
     0 'No'
     1 'Yes'.
 

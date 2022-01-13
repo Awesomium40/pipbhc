@@ -25,7 +25,7 @@ EXECUTE.
 DATASET NAME FullData.
 
 CD "procStepFolder".
-INSERT FILE ='procStepFolder\STEP 1 - Open Data and Label Variables and Values.sps'.
+INSERT FILE ='procStepFolder\STEP 1 - Construct Base Dataset.sps'.
 INSERT FILE ='procStepFolder\STEP 2 - Recode Variables and Create Scales.sps'.
 INSERT FILE ='procStepFolder\STEP 3 - Create SPARS Enrollment, FollowUp, and Discharge Datasets.sps'.
 INSERT FILE ='procStepFolder\STEP 4 - Create Enrollment Form and Tracking Form datasets.sps'.
