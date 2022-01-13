@@ -7,7 +7,7 @@
 /*Compute a Numeric version of Client_ID from the String Variable ConsumerID*/.
 DATASET ACTIVATE FullData.
 NUMERIC Client_ID (F10.0).
-COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
+COMPUTE Client_ID = NUMBER(REPLACE(REPLACE(ConsumerID, "'", ""), "-", ""), "F10.0").
 EXECUTE.
      
 /*Fix the one case where the ID is entered wrong*/.   
