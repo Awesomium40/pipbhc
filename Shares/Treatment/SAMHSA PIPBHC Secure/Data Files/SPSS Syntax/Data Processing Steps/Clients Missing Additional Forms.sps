@@ -47,7 +47,7 @@ EXECUTE.
 
 ****Numeric Client ID needs to be computed from the string version****.
 NUMERIC Client_ID (F10.0).
-COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
+COMPUTE Client_ID = NUMBER(REPLACE(REPLACE(ConsumerID, "'", ""), "-", ""), "F10.0").
 EXECUTE.
 RECODE Client_ID (1090021=0190021).
 EXECUTE.

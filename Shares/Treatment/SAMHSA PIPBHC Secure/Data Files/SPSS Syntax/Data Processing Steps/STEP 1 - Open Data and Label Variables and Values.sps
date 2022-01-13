@@ -383,7 +383,7 @@ missing values  InterviewType_07 ConsumerType_07 ReassessmentNumber_07 Assessmen
 
 /*Compute a Numeric version of Client_ID from the String Variable ConsumerID*/.
 NUMERIC Client_ID (F10.0).
-COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
+COMPUTE Client_ID = NUMBER(REPLACE(REPLACE(ConsumerID, "'", ""), "-", ""), "F10.0").
 EXECUTE.
      
 /*Fix the one case where the ID is entered wrong*/.   
@@ -462,6 +462,19 @@ EXECUTE.
 
 FORMATS ObservationDate LastServiceDate_New GAFDate_New DateBloodDrawn_New DOB_New DischargeDate_New (DATE14).
 DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB YearTemp LastServed.
+
+/************As of December, 2021, no longer collecting 3m/9m assessment data************/.
+/************SS-00006: Add logic to achieve the following************/.
+/************1: Remove 3m/9m data from the dataset************/.
+/************2: Recode 6m assessments such that they reflect the new values for assessment (600 instead of 300)************/.
+
+/****Remove 3m/rm reassessment data from the dataset, as it is no longer required****/.
+SELECT IF (Assessment NE 301 AND Assessment NE 303 AND Assessment NE 305).
+EXECUTE.
+
+/****Recode the old assessment values into the new values****/.
+RECODE Assessment(302=601)(304=602)(306=603).
+EXECUTE.
 
 
 /*..........................ADD VALUE LABELS..............................................*/

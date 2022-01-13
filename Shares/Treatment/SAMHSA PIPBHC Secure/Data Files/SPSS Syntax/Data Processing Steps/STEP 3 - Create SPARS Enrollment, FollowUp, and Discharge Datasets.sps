@@ -174,30 +174,10 @@ VALUE LABELS Terminated 1 'Terminated when grant ended' 0 'Discharged due to lac
 
 
 /******Construct a series of datasets, one for each follow-up assessment (3m, 6m, 9m, 12m)******/.
-
+/******As of December 2021, No longer collecting 3m/9m follow-ups******/.
+/******As part of this change, Assessment variable has changed from 30X to 60X******/.
+/******BL = 600, 6M = 601, 12M = 602, 18m = 603******/.
 /*Separate out data by Assessment (301=3m, 302=6m, 303=9m, 304=12m)*/.
-/*3m assessment*/.
-DATASET ACTIVATE FullData.
-SAVE OUTFILE= 'procStepFolder\Followup3.sav'
-    /KEEP Client_ID InterviewType_07 Assessment ConductedInterview.
-EXECUTE.
-
-GET
-    FILE='procStepFolder\Followup3.sav'.
-DATASET NAME Followup3.
-DATASET ACTIVATE  Followup3.
-FILTER OFF.
-USE ALL.
-SELECT IF (Assessment = 301).
-EXECUTE.
-
-NUMERIC Followup3M (F2.0).
-RECODE ConductedInterview (1=1) (ELSE=0) INTO Followup3M.
-VARIABLE LABELS  Followup3M 'Completed 3-month follow-up interview'.
-EXECUTE.
-VALUE LABELS Followup3M
-    0 'no' 1 'yes'.
-DELETE VARIABLES InterviewType_07 Assessment ConductedInterview.
 
 /*6m assessment*/.
 DATASET ACTIVATE FullData.
@@ -211,35 +191,13 @@ DATASET NAME Followup6.
 DATASET ACTIVATE  Followup6.
 FILTER OFF.
 USE ALL.
-SELECT IF (Assessment = 302).
+SELECT IF (Assessment = 601).
 EXECUTE.
 
 RECODE ConductedInterview (1=1) (ELSE=0) INTO Followup6M.
 VARIABLE LABELS  Followup6M 'Completed 6-month follow-up interview'.
 EXECUTE.
 VALUE LABELS Followup6M
-    0 'no' 1 'yes'.
-Delete variables InterviewType_07 Assessment ConductedInterview.
-
-/*9m assessment*/.
-DATASET ACTIVATE FullData.
-SAVE OUTFILE= 'procStepFolder\Followup9.sav'
-    /KEEP Client_ID InterviewType_07 Assessment ConductedInterview.
-EXECUTE.
-
-GET
-    FILE='procStepFolder\Followup9.sav'.
-DATASET NAME Followup9.
-DATASET ACTIVATE  Followup9.
-FILTER OFF.
-USE ALL.
-SELECT IF (Assessment = 303).
-EXECUTE.
-
-RECODE ConductedInterview (1=1) (ELSE=0) INTO Followup9M.
-VARIABLE LABELS  Followup9M 'Completed 9-month follow-up interview'.
-EXECUTE.
-VALUE LABELS Followup9M
     0 'no' 1 'yes'.
 Delete variables InterviewType_07 Assessment ConductedInterview.
 
@@ -255,7 +213,7 @@ DATASET NAME Followup12.
 DATASET ACTIVATE  Followup12.
 FILTER OFF.
 USE ALL.
-SELECT IF (Assessment = 304).
+SELECT IF (Assessment = 602).
 EXECUTE.
 
 RECODE ConductedInterview (1=1) (ELSE=0) INTO Followup12M.
@@ -265,24 +223,11 @@ VALUE LABELS Followup12M
     0 'no' 1 'yes'.
 Delete variables InterviewType_07 Assessment ConductedInterview.
 
-/*Need a single dataset that represents all follow-up data, so merge the 4 datasets constructed below into one*/.
-DATASET ACTIVATE Followup3.
+/*Need a single dataset that represents all follow-up data, so merge the2 datasets constructed above into one*/.
+DATASET ACTIVATE Followup12.
 SORT CASES BY Client_ID.
 DATASET ACTIVATE Followup6.
 SORT CASES BY Client_ID.
-DATASET ACTIVATE Followup9.
-SORT CASES BY Client_ID.
-DATASET ACTIVATE Followup12.
-SORT CASES BY Client_ID.
-DATASET ACTIVATE Followup3.
-MATCH FILES /FILE=*
-    /FILE='Followup6'
-    /BY Client_ID.
-EXECUTE.
-MATCH FILES /FILE=*
-    /FILE='Followup9'
-    /BY Client_ID.
-EXECUTE.
 MATCH FILES /FILE=*
     /FILE='Followup12'
     /BY Client_ID.
@@ -303,16 +248,14 @@ DATASET CLOSE Discharge.
 /*Merge Followup and Demographics/Discharge into Demographics*/.
 DATASET ACTIVATE Demographics.
 SORT CASES BY Client_ID.
-DATASET ACTIVATE Followup3.
+DATASET ACTIVATE Followup6.
 SORT CASES BY Client_ID.
 DATASET ACTIVATE Demographics.
 MATCH FILES /FILE=*
-    /FILE='Followup3'
+    /FILE='Followup6'
     /BY Client_ID.
 EXECUTE.
-DATASET CLOSE Followup3.
 DATASET CLOSE Followup6.
-DATASET CLOSE Followup9.
 DATASET CLOSE Followup12.
 
 /*Create variable for time between enrollment and discharge*/
@@ -327,9 +270,7 @@ EXECUTE.
 
 /*Clients who have not yet had their 3m follow-up show ther Followup3M variable as missing. Recode this to zero*/.
 DO IF (Clinic EQ 3).
-    RECODE Followup3M(SYSMS=0).
     RECODE Followup6M(SYSMS=0).
-    RECODE Followup9M(SYSMS=0).
     RECODE Followup12M(SYSMS=0).
 END IF.
 EXECUTE.
@@ -380,22 +321,14 @@ VARIABLE LEVEL  PrimaryLast (ORDINAL) /MatchSequence (SCALE).
 FREQUENCIES VARIABLES=PrimaryLast MatchSequence.
 EXECUTE.
 
-
+/******Compute an ordinal time variable based on Assessment variable******/.
 DATASET ACTIVATE FullData.
 RECODE MatchSequence (0=1)(1=1)(2=2)(3=3) into Time.
 EXECUTE.
 
-DO IF (Clinic LT 3).
-    RECODE Assessment(600=1)(302=2)(304=3)(305=4)(306=5) INTO A_Time.
-ELSE IF (Clinic EQ 3).
-    RECODE Assessment(600=1)(301=2)(302=3)(303=4)(304=5) INTO A_Time.
-END IF.
-
-/*Two clients from Velez had a 9m assessment instead of a 6m, so account for these in calcuation of A_Time variable*/.
-DO IF (Client_ID EQ 164381 OR Client_ID EQ 163655).
-    RECODE Assessment(303=2) INTO A_Time.
-END IF. 
+RECODE Assessment(600=1)(601=2)(602=3)(603=4) INTO A_Time.
 EXECUTE.
+
 FORMATS A_Time (F2.0).
 
 DELETE VARIABLES Clinic.
