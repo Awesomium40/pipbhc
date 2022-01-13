@@ -1,6 +1,12 @@
 * Encoding: UTF-8.
-*Creating a variable for whether or not we've received an additional client information from for a client for Enrollment Forms
-
+/***********************************
+/*Clients Missing Additional Forms.sps
+/*Constucts the dataset which lists those clients missing their additional information form for an assessment
+/*Clients are missing an additional form if, for any record in PIPBHC Data Download:
+/*    - The assessment was conducted (ConductedInterview = 1)
+/*    - Assessment point is BL, 6M, 12M (Assessment IN [600, 302, 304])
+/*    - No Corresponding record exists in Client Additional Information Form
+    
 
 FILE HANDLE acifFolder /NAME='rootFolder\Shares\Treatment\SAMHSA PIPBHC Secure\Additional Client Information Forms'.
 
@@ -23,6 +29,20 @@ GET FILE='acifFolder\full_data.sav'.
 DATASET NAME CMAF.
 DATASET ACTIVATE CMAF.
 DATASET CLOSE FD.
+
+
+/************As of December, 2021, no longer collecting 3m/9m assessment data************/.
+/************SS-00006: Add logic to achieve the following************/.
+/************1: Remove 3m/9m data from the dataset************/.
+/************2: Recode 6m assessments such that they reflect the new values for assessment (600 instead of 300)************/.
+
+/****Remove 3m/rm reassessment data from the dataset, as it is no longer required****/.
+SELECT IF (Assessment NE 301 AND Assessment NE 303 AND Assessment NE 305).
+EXECUTE.
+
+/****Recode the old assessment values into the new values****/.
+RECODE Assessment(302=601)(304=602)(306=603).
+EXECUTE.
 
 
 ****Numeric Client ID needs to be computed from the string version****.
@@ -112,11 +132,11 @@ RENAME VARIABLES PrimaryLast=Discharged.
 DATASET ACTIVATE CMAF.
 FILTER OFF.
 USE ALL.
-SELECT IF (Assessment EQ 600 OR Assessment EQ 302 OR Assessment EQ 304).
+SELECT IF (Assessment EQ 600 OR Assessment EQ 601 OR Assessment EQ 602).
 EXECUTE.
 
 SORT CASES BY Client_ID ObservationDate.
-RECODE Assessment(600=1)(302=2)(304=3) INTO Time.
+RECODE Assessment(600=1)(601=2)(602=3) INTO Time.
 EXECUTE.
 
 /****Again, there are likely to be duplicate cases, which need to be removed, as some clients were discharged and re-enrolled****/.
@@ -299,7 +319,7 @@ IF (SYSMIS(Discharged)) Discharged = 0.
 SELECT IF Clinic GE 2 and Form_Missing GT 0.
 EXECUTE.
 
-SAVE TRANSLATE OUTFILE='D:\SyncThing\ptea\CMAF2.xlsx'
+SAVE TRANSLATE OUTFILE='acifFolder\Clients_Without_Additional_Forms.xlsx'
   /TYPE=XLS
   /VERSION=12
   /MAP

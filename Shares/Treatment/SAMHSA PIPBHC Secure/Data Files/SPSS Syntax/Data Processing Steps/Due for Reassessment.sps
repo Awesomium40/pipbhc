@@ -36,6 +36,19 @@ DATASET ACTIVATE DFR.
 RECODE Client_ID (20000 thru 29999=2)(100000 thru 199999=1) (200000 thru 299999=2) (300000 thru 399999=3) (3000000 thru 3999999=3) INTO Clinic.
 EXECUTE.
 
+/************As of December, 2021, no longer collecting 3m/9m assessment data************/.
+/************SS-00006: Add logic to achieve the following************/.
+/************1: Remove 3m/9m data from the dataset************/.
+/************2: Recode 6m assessments such that they reflect the new values for assessment (600 instead of 300)************/.
+
+/****Remove 3m/rm reassessment data from the dataset, as it is no longer required****/.
+SELECT IF (Assessment NE 301 AND Assessment NE 303 AND Assessment NE 305).
+EXECUTE.
+
+/****Recode the old assessment values into the new values****/.
+RECODE Assessment(302=601)(304=602)(306=603).
+EXECUTE.
+
 /******Compute whether clients missed an interview******/.
 NUMERIC MissedAssessment(F2.0).
 DO IF Assessment NE 699.
@@ -46,7 +59,7 @@ EXECUTE.
 /******COMPUTE InterviewType******/.
 DATASET ACTIVATE DFR.
 NUMERIC InterviewType (F2.0).
-RECODE Assessment (600 = 1) (301 = 2) (302 = 3) (303 = 4) (304 = 5) (699=9) INTO InterviewType.
+RECODE Assessment (600 = 1)(601 = 2)(602 = 3)(603 = 4)(699=9) INTO InterviewType.
 EXECUTE.
 
 /******CREATE ObservationDate******/.
@@ -81,25 +94,9 @@ SELECT IF (Clinic GE 3).
 EXECUTE.
 
 
-/******Add some logic to deal with rows that are in error with respect to 'Assessment'******/.
-DATASET ACTIVATE DFR.
-DATASET COPY  Assessment_Errors.
-DATASET ACTIVATE Assessment_Errors.
-FILTER OFF.
-USE ALL.
-SELECT IF (Clinic GE 3 AND (Assessment NE 600 AND Assessment NE 301 AND Assessment NE 302 AND 
-    Assessment NE 303 AND Assessment NE 304 AND Assessment NE 699)).
-EXECUTE.
-
-
-WRITE OUTFILE='rootFolder/reassessment_errors.txt' ENCODING='UTF8'
-        /1'|Client ID='Client_ID  '|Assessment=' Assessment '|Date='ObservationDate '|'. 
-EXECUTE.
-
 /******Filter out the invalid records******/.
 DATASET ACTIVATE DFR.
-DATASET CLOSE Assessment_Errors.
-SELECT IF (Assessment EQ 600 OR Assessment EQ 301 OR Assessment EQ 302 OR Assessment EQ 303 OR Assessment EQ 304 OR Assessment EQ 699).
+SELECT IF (Assessment EQ 600 OR Assessment EQ 601 OR Assessment EQ 602 OR Assessment EQ 603 OR Assessment EQ 699).
 EXECUTE.
 
 /******COMPUTE Discharged AS PER STEP 3******/.
@@ -114,7 +111,6 @@ SELECT IF (Assessment EQ 699).
 EXECUTE.
 
 * Identify Duplicate Cases in discharge data - people who were discharged, re-enrolled, and then discharged again. there is also a few duplicates*/
-
 DATASET ACTIVATE DFR_Discharge.
 SORT CASES BY Client_ID(A) ObservationDate(A).
 MATCH FILES
@@ -159,7 +155,6 @@ DATASET ACTIVATE DFR.
 RECODE MissedAssessment.2(SYSMIS=0).
 RECODE MissedAssessment.3(SYSMIS=0).
 RECODE MissedAssessment.4(SYSMIS=0).
-RECODE MissedAssessment.5(SYSMIS=0).
 EXECUTE.
 
 /******MERGE Discharge AND FullData AS PER STEP 4******/.
@@ -173,53 +168,7 @@ MATCH FILES /FILE=*
 EXECUTE.
 DATASET CLOSE DFR_Discharge.
 
-/******MERGE Fulldata and HCV RESULTS******/.
-GET DATA
-  /TYPE=XLSX
-  /FILE='acifFolder\Additional Client Information Form Spreadsheet.xlsx'
-  /SHEET=name 'For IMPORT - DO NOT EDIT'
-  /CELLRANGE=FULL
-  /READNAMES=ON
-  /DATATYPEMIN PERCENTAGE=95.0
-  /HIDDEN IGNORE=YES.
-EXECUTE.
-DATASET NAME AI WINDOW=FRONT.
-DATASET ACTIVATE AI.
-RECODE Client_ID (20000 thru 29999=2)(100000 thru 199999=1) (200000 thru 299999=2) (300000 thru 399999=3) (3000000 thru 3999999=3) INTO Clinic.
-SELECT IF (NOT SYSMIS(Client_id) AND Clinic EQ 3).
-EXECUTE.
-
-SAVE OUTFILE='ratFolder\HCVResults.sav'
-    /KEEP=Client_ID Time HCVTestResult
-    /RENAME Time=Form_Time.
-
-/***MERGE IN HCV TEST RESULT DATA***/.
-/******NOTE THAT THIS MAY THROW AN ERROR FOR LINE 191, CITING DUPLICATE KEY. THIS IS EXPECTED******/.
-GET FILE='ratFolder\HCVResults.sav'.
-DATASET NAME HCV.
-DATASET ACTIVATE HCV.
-DATASET CLOSE AI.
-
-/***HCV Test Results only necessary from BL assessment***/.
-SELECT IF Form_Time EQ 1.
-EXECUTE.
-
-DATASET ACTIVATE DFR.
-SORT CASES BY Client_ID.
-DATASET ACTIVATE HCV.
-SORT CASES BY Client_ID.
-DATASET ACTIVATE DFR.
-MATCH FILES /FILE=*
-  /FILE='HCV'
-  /BY Client_ID.
-EXECUTE.
-
-
-DATASET ACTIVATE DFR.
-DATASET CLOSE HCV.
-SELECT IF NOT SYSMIS(Clinic).
-EXECUTE.
-
+/****Compute the time since enrollment, which is used to determine eligibility for various reassessments****/.
 NUMERIC today(DATE11).
 COMPUTE today = $time.
 EXECUTE.
@@ -230,37 +179,28 @@ COMPUTE  TimeSinceEnrollment=DATEDIF(today, ObservationDate.1, "days").
 
 /******COMPUTE CLIENTS THAT ARE Eligible AT ANY TIME POINT******/.
 /******NOTE THAT THESE LINES MAY THROW ERRORS IF NO CLIENTS HAVE HAD 6m/9m/12m REASSESSMENTS YET. THIS IS EXPECTED******/.
-NUMERIC M3Eligible (F2.0).
 NUMERIC M6Eligible (F2.0).
-NUMERIC M9Eligible (F2.0).
 NUMERIC M12Eligible (F2.0).
 NUMERIC AnyEligible (F2.0).
-COMPUTE M3Eligible = (TimeSinceEnrollment GE 60 AND TimeSinceEnrollment LE 120) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.2) AND MissedAssessment.2 EQ 0) AND (Lipid_LDL.1 GT 130 OR Lipid_Tri.1 GT 150 OR HCVTestResult = 1).
-COMPUTE M6Eligible = (TimeSinceEnrollment GE 150 AND TimeSinceEnrollment LE 210) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.3) AND MissedAssessment.3 EQ 0).
-COMPUTE M9Eligible = (TimeSinceEnrollment GE 240 AND TimeSinceEnrollment LE 300) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.4) AND MissedAssessment.4 EQ 0) AND (Lipid_LDL.1 GT 130 OR Lipid_Tri.1 GT 150).
-COMPUTE M12Eligible = (TimeSinceEnrollment GE 335 AND TimeSinceEnrollment LE 395) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.5) AND MissedAssessment.5 EQ 0).
-EXECUTE.
-COMPUTE AnyEligible = (M3Eligible EQ 1) OR (M6Eligible EQ 1) OR (M9Eligible EQ 1) OR (M12Eligible EQ 1).
+
+COMPUTE M6Eligible = (TimeSinceEnrollment GE 150 AND TimeSinceEnrollment LE 210) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.2) AND MissedAssessment.2 EQ 0).
+COMPUTE M12Eligible = (TimeSinceEnrollment GE 335 AND TimeSinceEnrollment LE 395) AND SYSMIS(Discharged) AND (SYSMIS(ObservationDate.3) AND MissedAssessment.3 EQ 0).
 EXECUTE.
 
-/******COMPUTE THE NATURE OF THE ASSESSMENT FOR WHICH A CLIENT IS DUE******/.
+COMPUTE AnyEligible = (M6Eligible EQ 1) OR (M12Eligible EQ 1).
+EXECUTE.
+
+/******COMPUTE THE NATURE OF THE ASSESSMENT FOR WHICH A CLIENT IS DUE AND DEADLINE FOR REASSESSMENT******/.
 NUMERIC AssessmentType (F2.0).
 NUMERIC DeadlineReassess(DATE11).
+
 NUMERIC Reassessment(F2.0).
-DO IF (M3Eligible EQ 1).
+DO IF (M6Eligible EQ 1).
     COMPUTE AssessmentType = 1.
-    COMPUTE DeadlineReassess = DATESUM(ObservationDate.1, 120, 'days').
-    RECODE TimeSinceEnrollment(60 THRU 90=1)(91 THRU 120=2)(ELSE=0) INTO Reassessment.
-ELSE IF (M6Eligible EQ 1).
-    COMPUTE AssessmentType = 2.
     COMPUTE DeadlineReassess = DATESUM(ObservationDate.1, 210, 'days').
     RECODE TimeSinceEnrollment(150 THRU 180=1)(181 THRU 210=2)(ELSE=0) INTO Reassessment.
-ELSE IF (M9Eligible EQ 1).
-    COMPUTE AssessmentType = 3.
-    COMPUTE DeadlineReassess = DATESUM(ObservationDate.1, 300, 'days').
-    RECODE TimeSinceEnrollment(240 THRU 270=1)(271 THRU 300=2)(ELSE=0) INTO Reassessment.
 ELSE IF (M12Eligible EQ 1).
-    COMPUTE AssessmentType = 4.
+    COMPUTE AssessmentType = 2.
     COMPUTE DeadlineReassess = DATESUM(ObservationDate.1, 395, 'days').
     RECODE TimeSinceEnrollment(335 THRU 365=1)(366 THRU 395=2)(ELSE=0) INTO Reassessment.
 END IF.
@@ -268,10 +208,8 @@ EXECUTE.
 
 VARIABLE LABELS AssessmentType 'Type of assessment for which a client is due'.
 VALUE LABELS AssessmentType 
-    1 '3-month reassessment' 
-    2 '6-month reassessment' 
-    3 '9-month reassessment' 
-    4 '12-month reassessment'.
+    1 '6-month reassessment' 
+    2 '12-month reassessment' .
 
 VALUE LABELS
 Reassessment
@@ -296,7 +234,7 @@ SAVE TRANSLATE OUTFILE='ratFolder\Reassessment Tracking.xlsx'
   /FIELDNAMES VALUE=NAMES
   /CELLS=LABELS
   /REPLACE
-  /KEEP=Client_ID Reassessment DeadlineReassess ObservationDate.1 Lipid_LDL.1 Lipid_Tri.1 HCVTestResult AssessmentType
+  /KEEP=Client_ID Reassessment DeadlineReassess ObservationDate.1 AssessmentType
   /RENAME (Client_ID Reassessment DeadlineReassess ObservationDate.1
   = ClientID Reassessment_Status Reassessment_Deadline EnrollmentDate).
 

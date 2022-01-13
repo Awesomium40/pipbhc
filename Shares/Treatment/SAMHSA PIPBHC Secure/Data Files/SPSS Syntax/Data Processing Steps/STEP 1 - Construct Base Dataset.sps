@@ -1,4 +1,106 @@
 * Encoding: UTF-8.
+/*Step 1 - Open Data and Label.sps
+/*
+/*Last Modified 11/22/2021
+/*By Justin W Walthers
+
+/*Compute a Numeric version of Client_ID from the String Variable ConsumerID*/.
+DATASET ACTIVATE FullData.
+NUMERIC Client_ID (F10.0).
+COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
+EXECUTE.
+     
+/*Fix the one case where the ID is entered wrong*/.   
+RECODE Client_ID (1090021=0190021).
+EXECUTE.
+           
+/*..............................................................FIX DATES...................................................*/
+
+/*Most of the date variables are stored as strings. Convert them to NUMERIC type and format appropriately*/.
+RECODE InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB
+    ('01/01/1869', '07/01/1869', '06/01/1869', '08/01/1869', '09/01/1869', '' = '-1').
+MISSING VALUES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB ('-1').
+EXECUTE.
+
+/*recode the various date variables into NUMERIC type rather than string*/.
+RECODE InterviewDate(MISSING=SYSMIS)(CONVERT) INTO InterviewDate_New.
+RECODE DischargeDate(MISSING=SYSMIS)(CONVERT) INTO DischargeDate_New.
+RECODE LastServiceDate(MISSING=SYSMIS)(CONVERT) INTO LastServiceDate_New.
+RECODE GAFDate(MISSING=SYSMIS)(CONVERT) INTO GAFDate_New.
+RECODE DateBloodDrawn(MISSING=SYSMIS)(CONVERT) INTO DateBloodDrawn_New.
+RECODE DOB(MISSING=SYSMIS)(CONVERT) INTO DOB_New.
+EXECUTE.
+
+/*Compute the ObservationDate variable from InterviewDate and DischargeDate*/.
+DO IF NOT SYSMIS(InterviewDate_New).
+    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((InterviewDate_New - 2 ) * 24 * 3600).
+ELSE IF NOT SYSMIS(DischargeDate_New).
+    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 24 * 3600).
+END IF.
+EXECUTE.
+
+
+* Date and Time Wizard: Year.
+COMPUTE Year=XDATE.YEAR($TIME).
+VARIABLE LABELS Year.
+VARIABLE LEVEL Year(SCALE).
+FORMATS Year(F8.0).
+VARIABLE WIDTH Year(8).
+EXECUTE.
+
+/*There are a handful of cases for which both InterviewDate and DischargeDate are missing. 
+/*These need an ObservationDate computed from the data that is available */.
+NUMERIC YearTemp (F4.0).
+DO IF Month GE 10.
+    COMPUTE YearTemp = FFY - 1.
+ELSE.
+    COMPUTE YearTemp = FFY.
+END IF.
+DO IF SYSMIS(ObservationDate).
+    COMPUTE ObservationDate = DATE.MDY(Month, 15, YearTemp).
+END IF.
+EXECUTE.
+
+/*The date variables are stored in days, need to convert these to seconds. Days * 24 (hours) * 60 (minutes) * 60 (seconds) */.
+/*24 * 60 * 60 = 24 * 3600 = 86400*/.
+COMPUTE LastServiceDate_New = DATE.MDY(1, 1, 1900) + ((LastServiceDate_New - 2 ) * 86400).
+COMPUTE GAFDate_New = DATE.MDY(1, 1, 1900) + ((GAFDate_New - 2 ) * 24 * 3600).
+COMPUTE DateBloodDrawn_New = DATE.MDY(1, 1, 1900) + ((DateBloodDrawn_New - 2 ) * 86400).
+COMPUTE DOB_New = DATE.MDY(1, 1, 1900) + ((DOB_New - 2 ) * 24 * 3600).
+COMPUTE DischargeDate_New = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 86400).
+EXECUTE.
+
+
+****LastServiceDate should reflect either the last time a client was served OR the last time they were assessed****.
+NUMERIC LastServed (DATE14).
+DO IF (Assessment NE 699).
+    COMPUTE LastServed = MAX(ObservationDate, LastServiceDate_New).
+END IF.
+EXECUTE.
+
+AGGREGATE
+  /OUTFILE=* MODE=ADDVARIABLES
+  /BREAK=Client_ID
+  /LastReceivedServiceDate=MAX(LastServed).
+EXECUTE.
+
+FORMATS ObservationDate LastServiceDate_New GAFDate_New DateBloodDrawn_New DOB_New DischargeDate_New (DATE14).
+DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB YearTemp LastServed.
+
+/************As of December, 2021, no longer collecting 3m/9m assessment data************/.
+/************SS-00006: Add logic to achieve the following************/.
+/************1: Remove 3m/9m data from the dataset************/.
+/************2: Recode 6m assessments such that they reflect the new values for assessment (600 instead of 300)************/.
+
+/****Remove 3m/rm reassessment data from the dataset, as it is no longer required****/.
+SELECT IF (Assessment NE 301 AND Assessment NE 303 AND Assessment NE 305).
+EXECUTE.
+
+/****Recode the old assessment values into the new values****/.
+RECODE Assessment(302=601)(304=602)(306=603).
+EXECUTE.
+
+
 
 /*...................LABEL ALL VARIABLES..................................................*/
 
@@ -13,7 +115,6 @@ Variable labels
     FFY 'Federal Fiscal Year (Calculated field based on InterviewDate)'
     FirstReceivedServicesDate '[Enter the month and year when the consumer first received services under the grant for this episode of care.]'
     GrantID 'Grant ID (Grant/Contract/Cooperative Agreement)'
-    InterviewDate 'When?'
     InterviewType_07 'Interview Type'
     Month '(Calculated field based on InterviewDate)'
     NextReassessment_10 'What data will be submitted for the next reassessment?'
@@ -40,7 +141,6 @@ Variable labels
 
 Variable labels
     Agegroup 'Age in 8 categories (Calculated field based on Age)'
-    DOB 'What is your month and year of birth?'
     EthnicCentralAmerican 'What ethnic group do you consider yourself?'
     EthnicCuban 'What ethnic group do you consider yourself?'
     EthnicDominican 'What ethnic group do you consider yourself?'
@@ -77,7 +177,6 @@ Variable labels
     EnoughEnergyForEverydayLife 'In the last 4 weeks, do you have enough energy for everyday life?'
     EverythingEffort 'During the past 30 days, about how often did you feel that everything was an effort?'
     FunctioningHousing 'My housing situation is satisfactory.'
-    GAFDate 'DATE GAF WAS ADMINISTERED'
     GAFScore 'WHAT WAS THE CONSUMER’S SCORE? GAF = '
     GetsAlongWithFamily 'I am getting along with my family.'
     Hallucinogens_Use 'In the past 30 days, how often have you used…hallucinogens (LSD, acid, mushrooms, PCP, Special K, ecstasy, etc.)?'
@@ -241,7 +340,6 @@ Variable labels
     bpressure_d 'Diastolic blood pressure '
     bpressure_s 'Systolic blood pressure '
     BreathCO 'Breath CO for smoking status'
-    DateBloodDrawn 'Date of blood draw'
     EightHour_fast 'Did patient successfully fast for 8 hours prior to providing the blood sample?'
     Height 'Height'
     HgbA1c  'HgbA1c '
@@ -273,14 +371,12 @@ Variable labels
 /*SECTION J. CLINICAL DISCHARGE STATUS */
 
 Variable labels
-    DischargeDate 'On what date was the consumer discharged? (Month and Year only)'
     DischargeStatus 'What is the consumers discharge status?'
     OtherDischargeStatus 'Other discharge status specify response'.
 
 /*SECTION K. SERVICES RECEIVED*/.
 
 Variable labels
-    LastServiceDate 'On what date did the consumer last receive services? (Month and Year only)'
     Svc_Assessment 'Assessment since last NOMs Interview?'
     Svc_CaseManagement 'Case Management since last NOMs Interview?'
     Svc_ChildCare 'Child care services since last NOMs Interview?'
@@ -380,90 +476,6 @@ missing values  InterviewType_07 ConsumerType_07 ReassessmentNumber_07 Assessmen
     Svc_HIVTesting Svc_ReferredSupport
     ( -9).
             
-
-/*Compute a Numeric version of Client_ID from the String Variable ConsumerID*/.
-NUMERIC Client_ID (F10.0).
-COMPUTE Client_ID = NUMBER(REPLACE(ConsumerID, "'", ""), "F10.0").
-EXECUTE.
-     
-/*Fix the one case where the ID is entered wrong*/.   
-RECODE Client_ID (1090021=0190021).
-EXECUTE.
-           
-/*..............................................................FIX DATES...................................................*/
-
-/*Most of the date variables are stored as strings. Convert them to NUMERIC type and format appropriately*/.
-RECODE InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB
-    ('01/01/1869', '07/01/1869', '06/01/1869', '08/01/1869', '09/01/1869', '' = '-1').
-MISSING VALUES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB ('-1').
-EXECUTE.
-
-/*recode the various date variables into NUMERIC type rather than string*/.
-RECODE InterviewDate(MISSING=SYSMIS)(CONVERT) INTO InterviewDate_New.
-RECODE DischargeDate(MISSING=SYSMIS)(CONVERT) INTO DischargeDate_New.
-RECODE LastServiceDate(MISSING=SYSMIS)(CONVERT) INTO LastServiceDate_New.
-RECODE GAFDate(MISSING=SYSMIS)(CONVERT) INTO GAFDate_New.
-RECODE DateBloodDrawn(MISSING=SYSMIS)(CONVERT) INTO DateBloodDrawn_New.
-RECODE DOB(MISSING=SYSMIS)(CONVERT) INTO DOB_New.
-EXECUTE.
-
-/*Compute the ObservationDate variable from InterviewDate and DischargeDate*/.
-DO IF NOT SYSMIS(InterviewDate_New).
-    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((InterviewDate_New - 2 ) * 24 * 3600).
-ELSE IF NOT SYSMIS(DischargeDate_New).
-    COMPUTE ObservationDate = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 24 * 3600).
-END IF.
-EXECUTE.
-
-
-* Date and Time Wizard: Year.
-COMPUTE Year=XDATE.YEAR($TIME).
-VARIABLE LABELS Year.
-VARIABLE LEVEL Year(SCALE).
-FORMATS Year(F8.0).
-VARIABLE WIDTH Year(8).
-EXECUTE.
-
-/*There are a handful of cases for which both InterviewDate and DischargeDate are missing. 
-/*These need an ObservationDate computed from the data that is available */.
-NUMERIC YearTemp (F4.0).
-DO IF Month GE 10.
-    COMPUTE YearTemp = FFY - 1.
-ELSE.
-    COMPUTE YearTemp = FFY.
-END IF.
-DO IF SYSMIS(ObservationDate).
-    COMPUTE ObservationDate = DATE.MDY(Month, 15, YearTemp).
-END IF.
-EXECUTE.
-
-/*The date variables are stored in days, need to convert these to seconds. Days * 24 (hours) * 60 (minutes) * 60 (seconds) */.
-/*24 * 60 * 60 = 24 * 3600 = 86400*/.
-COMPUTE LastServiceDate_New = DATE.MDY(1, 1, 1900) + ((LastServiceDate_New - 2 ) * 86400).
-COMPUTE GAFDate_New = DATE.MDY(1, 1, 1900) + ((GAFDate_New - 2 ) * 24 * 3600).
-COMPUTE DateBloodDrawn_New = DATE.MDY(1, 1, 1900) + ((DateBloodDrawn_New - 2 ) * 86400).
-COMPUTE DOB_New = DATE.MDY(1, 1, 1900) + ((DOB_New - 2 ) * 24 * 3600).
-COMPUTE DischargeDate_New = DATE.MDY(1, 1, 1900) + ((DischargeDate_New - 2 ) * 86400).
-EXECUTE.
-
-
-****LastServiceDate should reflect either the last time a client was served OR the last time they were assessed****.
-NUMERIC LastServed (DATE14).
-DO IF (Assessment NE 699).
-    COMPUTE LastServed = MAX(ObservationDate, LastServiceDate_New).
-END IF.
-EXECUTE.
-
-AGGREGATE
-  /OUTFILE=* MODE=ADDVARIABLES
-  /BREAK=Client_ID
-  /LastReceivedServiceDate=MAX(LastServed).
-EXECUTE.
-
-FORMATS ObservationDate LastServiceDate_New GAFDate_New DateBloodDrawn_New DOB_New DischargeDate_New (DATE14).
-DELETE VARIABLES InterviewDate DischargeDate LastServiceDate GAFDate DateBloodDrawn DOB YearTemp LastServed.
-
-
 /*..........................ADD VALUE LABELS..............................................*/
 
 /*Yes and No*/
